@@ -180,14 +180,6 @@ public class NewEmployeeForm extends JDialog {
                 BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         field.setPreferredSize(new Dimension(250, 35));
 
-        if (labelText.contains("Birthday")) {
-            field.setToolTipText("Format: MM/DD/YYYY (e.g., 01/15/1990)");
-        } else if (labelText.contains("Salary")) {
-            field.setToolTipText("Enter monthly salary amount (numbers only)");
-        } else if (labelText.contains("Phone")) {
-            field.setToolTipText("Format: 09XX-XXX-XXXX");
-        }
-
         mainPanel.add(field, gbc);
     }
 
@@ -252,8 +244,6 @@ public class NewEmployeeForm extends JDialog {
         String tin = tinField.getText().trim();
         String pagIbigNumber = pagIbigNumberField.getText().trim();
 
-        System.out.println("Attempting to save employee: " + firstName + " " + lastName);
-
         if (employeeNumber.isEmpty() || firstName.isEmpty() || lastName.isEmpty()) {
             showMessage("Employee Number, First Name, and Last Name are required!", Color.RED);
             return;
@@ -286,22 +276,15 @@ public class NewEmployeeForm extends JDialog {
 
             Timer timer = new Timer(1500, new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    try {
-                        if (parentWindow != null) {
-                            System.out.println("Calling refreshTable on parent window...");
-                            parentWindow.refreshTable();
-
-                            JOptionPane.showMessageDialog(parentWindow,
-                                    "New employee '" + firstName + " " + lastName + "' has been added!\n" +
-                                            "Employee ID: " + employeeNumber,
-                                    "Employee Added Successfully",
-                                    JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    } catch (Exception ex) {
-                        System.err.println("Error refreshing parent: " + ex.getMessage());
-                    } finally {
-                        dispose();
+                    if (parentWindow != null) {
+                        parentWindow.refreshTable();
+                        JOptionPane.showMessageDialog(parentWindow,
+                                "New employee '" + firstName + " " + lastName + "' has been added!\n" +
+                                        "Employee ID: " + employeeNumber,
+                                "Employee Added Successfully",
+                                JOptionPane.INFORMATION_MESSAGE);
                     }
+                    dispose();
                 }
             });
             timer.setRepeats(false);
@@ -309,7 +292,6 @@ public class NewEmployeeForm extends JDialog {
 
         } catch (IOException e) {
             showMessage("Error saving employee: " + e.getMessage(), Color.RED);
-            System.err.println("Save error: " + e.getMessage());
             e.printStackTrace();
 
             saveButton.setEnabled(true);
@@ -327,66 +309,41 @@ public class NewEmployeeForm extends JDialog {
                    String supervisor, String salary, String sssNumber,
                    String philHealthNumber, String tin, String pagIbigNumber) throws IOException {
 
-        String csvFile = "D:\\Users\\Cherwin\\MO-IT103-MotorPHPayroll-plusGUI-CH-CZ\\resources\\MotorPH Employee Data - Employee Details.csv";
-
-        System.out.println("Attempting to save to: " + csvFile);
-
+        String csvFile = "Employee Data.csv"; // Update path as needed
         File file = new File(csvFile);
-        if (!file.exists()) {
-            throw new IOException("CSV file not found at: " + csvFile +
-                    "\nPlease check the file path!");
-        }
 
-        String hourlyRate = "0";
-        if (!salary.isEmpty()) {
-            try {
-                double monthlySalary = Double.parseDouble(salary);
-                hourlyRate = String.format("%.2f", monthlySalary / (22 * 8));
-            } catch (NumberFormatException e) {
-                hourlyRate = "0";
-            }
-        }
+        double monthlySalary = salary.isEmpty() ? 0 : Double.parseDouble(salary);
+        double semiMonthlyRate = monthlySalary / 2;
+        double hourlyRate = monthlySalary / (22 * 8);
 
-        String semiMonthlyRate = salary.isEmpty() ? "0" : String.format("%.2f", Double.parseDouble(salary) / 2);
-
-        String csvLine = String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"",
+        String csvLine = String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"Regular\",\"%s\",\"%s\",\"%.2f\",\"1500.00\",\"2000.00\",\"1000.00\",\"%.2f\",\"%.2f\"",
                 employeeNumber,
                 lastName,
                 firstName,
-                birthday.isEmpty() ? "" : birthday,
-                address.isEmpty() ? "" : address,
-                phone.isEmpty() ? "" : phone,
-                sssNumber.isEmpty() ? "" : sssNumber,
-                philHealthNumber.isEmpty() ? "" : philHealthNumber,
-                tin.isEmpty() ? "" : tin,
-                pagIbigNumber.isEmpty() ? "" : pagIbigNumber,
-                "Regular",
-                position.isEmpty() ? "Employee" : position,
-                supervisor.isEmpty() ? "" : supervisor,
-                salary.isEmpty() ? "0" : salary,
-                "1500.00",
-                "2000.00",
-                "1000.00",
+                birthday,
+                address,
+                phone,
+                sssNumber,
+                philHealthNumber,
+                tin,
+                pagIbigNumber,
+                position,
+                supervisor,
+                monthlySalary,
                 semiMonthlyRate,
-                hourlyRate
-        );
-
-        System.out.println("CSV Line to add: " + csvLine);
+                hourlyRate);
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvFile, true))) {
-            writer.newLine();
+            if (file.length() == 0) {
+                writer.write("Employee #,Last Name,First Name,Birthday,Address,Phone Number,SSS #,Philhealth #,TIN #,Pag-ibig #,Status,Position,Immediate Supervisor,Basic Salary,Rice Subsidy,Phone Allowance,Clothing Allowance,Gross Semi-monthly Rate,Hourly Rate");
+                writer.newLine();
+            }
             writer.write(csvLine);
-            writer.flush();
+            writer.newLine();
         }
-
-        System.out.println("Successfully saved new employee to CSV!");
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new NewEmployeeForm(null);
-            }
-        });
+        SwingUtilities.invokeLater(() -> new NewEmployeeForm(null));
     }
 }

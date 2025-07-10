@@ -1,11 +1,10 @@
 package motorph.gui;
 
 import motorph.process.PayrollProcessor;
+import motorph.test.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainDashboard extends JFrame {
@@ -100,150 +99,107 @@ public class MainDashboard extends JFrame {
     }
 
     private void setupButtons() {
-        employeeButton.addActionListener(e -> handleButtonClick(this::openEmployeeManagement));
-        payrollButton.addActionListener(e -> handleButtonClick(this::openPayrollProcessing));
-        reportsButton.addActionListener(e -> handleButtonClick(this::openReports));
-        logoutButton.addActionListener(e -> handleButtonClick(this::logout));
-    }
-
-    private void handleButtonClick(Runnable action) {
-        if (!isProcessing.getAndSet(true)) {
-            try {
-                action.run();
-            } finally {
-                isProcessing.set(false);
+        // ✅ Updated Employee Management Button with Admin Access Check
+        employeeButton.addActionListener(e -> {
+            if (!currentUserRole.equals("admin")) {
+                JOptionPane.showMessageDialog(this,
+                        "Only administrators can access Employee Management",
+                        "Access Denied",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
             }
-        }
-    }
-
-    private void openEmployeeManagement() {
-        if (!currentUserRole.equals("admin")) {
-            JOptionPane.showMessageDialog(this,
-                    "Only administrators can access Employee Management",
-                    "Access Denied",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        JDialog loading = showLoading("Opening Employee Management");
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    dispose();
-                    new EmployeeManagement();
-                });
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    JOptionPane.showMessageDialog(null,
-                            "Could not open Employee Management: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                    ex.printStackTrace();
-                });
-            }
-        }).start();
-    }
-
-    private void openPayrollProcessing() {
-        JDialog loading = showLoading("Opening Payroll Processing");
-        new Thread(() -> {
-            try {
-                // Initialize payroll processor with actual file paths
-                String employeeFile = "util/Employee Data.csv";
-                String attendanceFile = "util/Attendance Data.csv"; // You'll need this file
-
-                // Create a sample payroll processor
-                PayrollProcessor processor = new PayrollProcessor(employeeFile, attendanceFile);
-
-                // For demo purposes, process payroll for first employee
-                Thread.sleep(500);
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    // Show payroll processing UI or results
-                    JOptionPane.showMessageDialog(null,
-                            "Payroll Processing initialized successfully!\n" +
-                                    "Using employee file: " + employeeFile + "\n" +
-                                    "Using attendance file: " + attendanceFile,
-                            "Payroll Processing",
-                            JOptionPane.INFORMATION_MESSAGE);
-                });
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    JOptionPane.showMessageDialog(null,
-                            "Error opening Payroll Processing: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                });
-            }
-        }).start();
-    }
-
-    private void openReports() {
-        JDialog loading = showLoading("Generating Reports");
-        new Thread(() -> {
-            try {
-                Thread.sleep(500);
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    // Show sample reports based on test classes
-                    String reportContent = "=== Payroll Reports ===\n\n" +
-                            "1. Statutory Deductions Test Results\n" +
-                            "   - Mid-month deductions passed\n" +
-                            "   - End-month deductions passed\n\n" +
-                            "2. Holiday Pay Calculations\n" +
-                            "   - Regular holiday pay verified\n" +
-                            "   - Special holiday pay verified\n\n" +
-                            "3. Work Hours Calculations\n" +
-                            "   - Normal day calculations passed\n" +
-                            "   - Overtime calculations passed";
-
-                    JTextArea textArea = new JTextArea(reportContent);
-                    textArea.setEditable(false);
-                    JScrollPane scrollPane = new JScrollPane(textArea);
-                    scrollPane.setPreferredSize(new Dimension(500, 300));
-
-                    JOptionPane.showMessageDialog(null, scrollPane,
-                            "Payroll Reports", JOptionPane.PLAIN_MESSAGE);
-                });
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> {
-                    loading.dispose();
-                    JOptionPane.showMessageDialog(null,
-                            "Error generating reports: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                });
-            }
-        }).start();
-    }
-
-    private void logout() {
-        int choice = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to logout?",
-                "Confirm Logout",
-                JOptionPane.YES_NO_OPTION);
-
-        if (choice == JOptionPane.YES_OPTION) {
             dispose();
-            SwingUtilities.invokeLater(() -> new LoginForm());
-        }
+            new EmployeeManagement().setVisible(true);
+        });
+
+        // Payroll Processing Button
+        payrollButton.addActionListener(e -> {
+            dispose();
+            new MainMenuFrame(); // Opens the main menu with payroll options
+        });
+
+        // Reports Button
+        reportsButton.addActionListener(e -> {
+            JDialog reportsDialog = new JDialog(this, "Reports Menu", true);
+            reportsDialog.setSize(400, 300);
+            reportsDialog.setLocationRelativeTo(this);
+            reportsDialog.setLayout(new GridLayout(4, 1, 10, 10));
+            reportsDialog.getContentPane().setBackground(new Color(0xF5DEB3));
+
+            JButton holidayReportBtn = createStyledButton("Holiday Pay Report", new Color(52, 152, 219));
+            JButton statutoryReportBtn = createStyledButton("Statutory Deductions Report", new Color(155, 89, 182));
+            JButton workHoursReportBtn = createStyledButton("Work Hours Report", new Color(46, 204, 113));
+            JButton closeBtn = createStyledButton("Close", new Color(231, 76, 60));
+
+            holidayReportBtn.addActionListener(ev -> {
+                new HolidayPayTest().runTests();
+                JOptionPane.showMessageDialog(reportsDialog,
+                        "Holiday Pay Report generated successfully!",
+                        "Report Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+            });
+
+            statutoryReportBtn.addActionListener(ev -> {
+                new StatutoryDeductionsTest().runTests();
+                JOptionPane.showMessageDialog(reportsDialog,
+                        "Statutory Deductions Report generated successfully!",
+                        "Report Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+            });
+
+            workHoursReportBtn.addActionListener(ev -> {
+                new WorkHoursCalculatorTest().runTests();
+                JOptionPane.showMessageDialog(reportsDialog,
+                        "Work Hours Report generated successfully!",
+                        "Report Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+            });
+
+            closeBtn.addActionListener(ev -> reportsDialog.dispose());
+
+            reportsDialog.add(holidayReportBtn);
+            reportsDialog.add(statutoryReportBtn);
+            reportsDialog.add(workHoursReportBtn);
+            reportsDialog.add(closeBtn);
+            reportsDialog.setVisible(true);
+        });
+
+        // Logout Button
+        logoutButton.addActionListener(e -> {
+            int choice = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to logout?",
+                    "Confirm Logout",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                dispose();
+                new LoginForm();
+            }
+        });
     }
 
-    private JDialog showLoading(String message) {
-        JDialog loading = new JDialog(this, "Loading", true);
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JLabel(message + "...", SwingConstants.CENTER));
-        panel.add(new JProgressBar(), BorderLayout.SOUTH);
-        loading.add(panel);
-        loading.setSize(300, 100);
-        loading.setLocationRelativeTo(this);
-        loading.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-        loading.setVisible(true);
-        return loading;
+    private JButton createStyledButton(String text, Color bgColor) {
+        JButton button = new JButton(text);
+        button.setBackground(bgColor);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            Color originalColor = bgColor;
+
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(originalColor.darker());
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(originalColor);
+            }
+        });
+
+        return button;
     }
 
     public static void main(String[] args) {

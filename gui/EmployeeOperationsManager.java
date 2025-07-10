@@ -2,10 +2,9 @@ package motorph.gui;
 
 import motorph.employee.Employee;
 import motorph.employee.EmployeeDataReader;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -202,15 +201,15 @@ public class EmployeeOperationsManager {
     private JPanel createEmployeeForm(Employee employee, boolean isUpdate) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBackground(new Color(0xF5DEB3));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
-
         return panel;
     }
 
     private boolean saveNewEmployeeFromForm(JPanel formPanel) {
         return true;
+    }
+
+    public Employee getEmployee(String employeeId) {
+        return employeeDataReader.getEmployee(employeeId);
     }
 
     public boolean updateEmployee(String id, String firstName, String lastName, String position) {
@@ -224,12 +223,14 @@ public class EmployeeOperationsManager {
                 String line;
                 while ((line = br.readLine()) != null) {
                     if (line.startsWith("\"" + id + "\"")) {
-                        String[] parts = line.split(",");
-                        parts[1] = "\"" + lastName + "\"";
-                        parts[2] = "\"" + firstName + "\"";
-                        parts[11] = "\"" + position + "\"";
-                        line = String.join(",", parts);
-                        found = true;
+                        String[] parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
+                        if (parts.length >= 12) {
+                            parts[1] = "\"" + lastName + "\"";
+                            parts[2] = "\"" + firstName + "\"";
+                            parts[11] = "\"" + position + "\"";
+                            line = String.join(",", parts);
+                            found = true;
+                        }
                     }
                     lines.add(line);
                 }
